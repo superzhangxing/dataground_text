@@ -111,37 +111,38 @@ def compute_tf_matrix(train_data, dev_data, test_data):
         return word2id, id2word
 
     word2id,id2word = build_vocab(train_data, dev_data)
-    train_matrix = lil_matrix(len(train_data),)
+    train_matrix = lil_matrix(len(train_data), len(word2id))
+
 
 
 if __name__ == '__main__':
-    train_data = pd.read_csv('../new_data/train_set.csv')
-    docs = train_data['word_seg'].values.tolist()
-    labels = train_data['class'].values.tolist()
-    print('start statistic df...')
-    df_list, df_dict = stat_df(docs)
-    with open('../analysis/df.csv', 'w', encoding='utf-8') as f:
-        for df in df_list:
-            f.write(df[0]+','+str(df[1]))
-            f.write('\n')
-    print('start statistic cf...')
-    cf_list, cf_dict = stat_cf(docs, labels)
-    with open('../analysis/cf.csv', 'w', encoding='utf-8') as f:
-        for cf in cf_list:
-            f.write(cf[0]+','+str(cf[1]))
-            f.write('\n')
+    # train_data = pd.read_csv('../new_data/train_set.csv')
+    # docs = train_data['word_seg'].values.tolist()
+    # labels = train_data['class'].values.tolist()
+    # print('start statistic df...')
+    # df_list, df_dict = stat_df(docs)
+    # with open('../analysis/df.csv', 'w', encoding='utf-8') as f:
+    #     for df in df_list:
+    #         f.write(df[0]+','+str(df[1]))
+    #         f.write('\n')
+    # print('start statistic cf...')
+    # cf_list, cf_dict = stat_cf(docs, labels)
+    # with open('../analysis/cf.csv', 'w', encoding='utf-8') as f:
+    #     for cf in cf_list:
+    #         f.write(cf[0]+','+str(cf[1]))
+    #         f.write('\n')
 
     # df/cf
-    print('start statistic df_cf_rate...')
-    df_cf_rate_dict = {}
-    for word in df_dict.keys():
-        rate = df_dict[word]//cf_dict[word]
-        df_cf_rate_dict[word] = rate
-    df_cf_rate_list = sorted(df_cf_rate_dict.items(), key=lambda d:d[1], reverse=True)
-    with open('../analysis/df_cf_rate.csv', 'w', encoding='utf-8') as f:
-        for rate in df_cf_rate_list:
-            f.write(rate[0]+','+str(rate[1])+','+str(df_dict[rate[0]])+','+str(cf_dict[rate[0]]))
-            f.write('\n')
+    # print('start statistic df_cf_rate...')
+    # df_cf_rate_dict = {}
+    # for word in df_dict.keys():
+    #     rate = df_dict[word]//cf_dict[word]
+    #     df_cf_rate_dict[word] = rate
+    # df_cf_rate_list = sorted(df_cf_rate_dict.items(), key=lambda d:d[1], reverse=True)
+    # with open('../analysis/df_cf_rate.csv', 'w', encoding='utf-8') as f:
+    #     for rate in df_cf_rate_list:
+    #         f.write(rate[0]+','+str(rate[1])+','+str(df_dict[rate[0]])+','+str(cf_dict[rate[0]]))
+    #         f.write('\n')
 
     # dc, bdc
     # word2id, id2word, label2id, id2label = build_map(docs, labels)
@@ -150,6 +151,9 @@ if __name__ == '__main__':
     # for i, (dc, bdc) in tqdm(enumerate(zip(dc_array, bdc_array))):
     #     w_str = str(id2word[i])+','+str(dc)+','+str(bdc)+'\n'
     #     f.write(w_str)
+
+    error = pd.read_csv('../result/dev_error', header=None)
+
 
 
 

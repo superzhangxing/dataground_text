@@ -113,8 +113,8 @@ if __name__ == '__main__':
 
     # filter word for files
     filter_word('../preprocess_data/train_word_seg','../preprocess_data/train_word_seg_filter',
-                '../analysis/df_cf_rate.csv', 50000, 2)
+                '../analysis/df_cf_rate.csv', 50000, 3)
     filter_word('../preprocess_data/dev_word_seg','../preprocess_data/dev_word_seg_filter',
-                '../analysis/df_cf_rate.csv', 50000, 2)
+                '../analysis/df_cf_rate.csv', 50000, 3)
     filter_word('../preprocess_data/test_word_seg','../preprocess_data/test_word_seg_filter',
-                '../analysis/df_cf_rate.csv', 50000, 2)
+                '../analysis/df_cf_rate.csv', 50000, 3)
