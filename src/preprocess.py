@@ -60,6 +60,27 @@ def cut_data(origin_data_file, cut_data_file, cut_num = 500, cut_type='front'):
         f_cut.write('\n')
     f_cut.close()
 
+def filter_word(file, new_file, file_df_cf_rate, max_df=50000, min_df_cf_rate=3):
+    df_cf_rate = pd.read_csv(file_df_cf_rate, header=None, index_col=0)
+    filter_df_cf_rate = df_cf_rate[(df_cf_rate[1]>=min_df_cf_rate) & (df_cf_rate[2]<max_df)]
+    retain_word_set = set(filter_df_cf_rate.index)
+
+    docs = pd.read_csv(file, header=None, squeeze=True).values.tolist()
+    new_docs = []
+    for doc in tqdm(docs):
+        word_list = doc.split()
+        new_word_list = []
+        for word in word_list:
+            if int(word) in retain_word_set:
+                new_word_list.append(word)
+        if len(new_word_list) == 0:
+            new_word_list.append(word_list[0])
+        new_doc = ' '.join(new_word_list)
+        new_docs.append(new_doc)
+
+    pd.Series(new_docs).to_csv(new_file, header=False, index=False, mode='w', sep='\n')
+
+
 
 if __name__ == '__main__':
     # split('../new_data/train_set.csv', '../preprocess_data/train', '../preprocess_data/dev')
@@ -87,5 +108,13 @@ if __name__ == '__main__':
     # print('train article len: %d, train word seg len: %d' % (train_article_avg_len, train_word_seg_avg_len))
     # print('test article len: %d, test word seg len: %d' % (test_article_avg_len, test_word_seg_avg_len))
 
-    label_num = stat_class_sample_number('../new_data/train_set.csv')
-    print(label_num)
+    # label_num = stat_class_sample_number('../new_data/train_set.csv')
+    # print(label_num)
+
+    # filter word for files
+    filter_word('../preprocess_data/train_word_seg','../preprocess_data/train_word_seg_filter',
+                '../analysis/df_cf_rate.csv', 50000, 2)
+    filter_word('../preprocess_data/dev_word_seg','../preprocess_data/dev_word_seg_filter',
+                '../analysis/df_cf_rate.csv', 50000, 2)
+    filter_word('../preprocess_data/test_word_seg','../preprocess_data/test_word_seg_filter',
+                '../analysis/df_cf_rate.csv', 50000, 2)
