@@ -5,6 +5,8 @@ import numpy as np
 from tqdm import tqdm
 import scipy
 from scipy.sparse import lil_matrix, dok_matrix, csr_matrix
+import heapq
+
 
 # 统计在词的df（文档频率）
 def stat_df(docs):
@@ -92,6 +94,26 @@ def calculate_dc_bdc(docs, labels, word2id, label2id):
     bdc_array = 1. + bdc_array/np.log(num_label)
     return dc_array, bdc_array
 
+def calculate_p_matrix(docs, labels, word2id, label2id):
+    num_label = len(label2id)
+    num_word = len(word2id)
+    assert num_label > 1
+    p_matrix = np.zeros(shape=(num_word, num_label), dtype=float)
+
+    for i, (doc, label) in tqdm(enumerate(zip(docs, labels))):
+        word_list = doc.split()
+        label_id = label2id[label]
+        length = len(word_list)
+        if length < 1:
+            continue
+        temp = 1./length
+        for word in word_list:
+            p_matrix[word2id[word]][label_id] += temp
+    p_label = np.sum(p_matrix, axis=0)
+    p_matrix = p_matrix / p_label
+    return p_matrix
+
+
 def build_vocab(train_data, dev_data):
     data = []
     data.extend(train_data)
@@ -135,9 +157,9 @@ def compute_tf_matrix(train_data, dev_data, test_data, word2id):
 
 def compute_dc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
     dc_dict = {}
-    dc_data = pd.read_csv(dc_bdc_file, header=False)
+    dc_data = pd.read_csv(dc_bdc_file, header=None, dtype={0:str, 1:float, 2:float})
     for index, row in dc_data.iterrows():
-        dc_dict[str(row[0])] = dc_dict[row[1]]
+        dc_dict[row[0]] = row[1]
 
     train_matrix = lil_matrix((len(train_data), len(word2id)),dtype=float)
     dev_matrix = lil_matrix((len(dev_data), len(word2id)), dtype=float)
@@ -167,9 +189,9 @@ def compute_dc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
 
 def compute_bdc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
     dc_dict = {}
-    dc_data = pd.read_csv(dc_bdc_file, header=False)
+    dc_data = pd.read_csv(dc_bdc_file, header=None, dtype={0:str, 1:float, 2:float})
     for index, row in dc_data.iterrows():
-        dc_dict[str(row[0])] = dc_dict[row[2]]
+        dc_dict[row[0]] = row[2]
 
     train_matrix = lil_matrix((len(train_data), len(word2id)), dtype=float)
     dev_matrix = lil_matrix((len(dev_data), len(word2id)), dtype=float)
@@ -198,9 +220,9 @@ def compute_bdc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
 
 
 if __name__ == '__main__':
-    # train_data = pd.read_csv('../new_data/train_set.csv')
-    # docs = train_data['word_seg'].values.tolist()
-    # labels = train_data['class'].values.tolist()
+    train_data = pd.read_csv('../new_data/train_set.csv')
+    docs = train_data['word_seg'].values.tolist()
+    labels = train_data['class'].values.tolist()
     # print('start statistic df...')
     # df_list, df_dict = stat_df(docs)
     # with open('../analysis/df.csv', 'w', encoding='utf-8') as f:
@@ -233,13 +255,25 @@ if __name__ == '__main__':
     # for i, (dc, bdc) in tqdm(enumerate(zip(dc_array, bdc_array))):
     #     w_str = str(id2word[i])+','+str(dc)+','+str(bdc)+'\n'
     #     f.write(w_str)
+    # f.close()
 
-    # error = pd.read_csv('../result/dev_error', header=None)
+    # train_data = pd.read_csv('../preprocess_data/train_word_seg', header=None, squeeze=True).values.tolist()
+    # dev_data = pd.read_csv('../preprocess_data/dev_word_seg', header=None, squeeze=True).values.tolist()
+    # test_data = pd.read_csv('../preprocess_data/test_word_seg', header=None, squeeze=True).values.tolist()
+    # word2id, id2word = build_vocab(train_data, dev_data)
+    # train_matrix, dev_matrix, test_matrix = compute_dc_matrix(train_data, dev_data, test_data, '../analysis/dc_bdc', word2id)
 
-    train_data = pd.read_csv('../preprocess_data/train_word_seg', header=None, squeeze=True).values.tolist()
-    dev_data = pd.read_csv('../preprocess_data/dev_word_seg', header=None, squeeze=True).values.tolist()
-    test_data = pd.read_csv('../preprocess_data/test_word_seg', header=None, squeeze=True).values.tolist()
-    train_matrix, dev_matrix, test_matrix = compute_tf_matrix(train_data, dev_data, test_data)
+    # statistic p matrix
+    word2id, id2word, label2id, id2label = build_map(docs, labels)
+    p_matrix = calculate_p_matrix(docs, labels, word2id, id2word)
+    n = 100
+    p_max_matrix = np.argsort(p_matrix, axis=0)[p_matrix.shape[0]-n:]
+    f = open('../analysis/p_max', 'w', encoding='utf-8')
+    for i in p_max_matrix.shape[0]:
+        for j in p_max_matrix.shape[1]:
+            f.write(id2word[p_max_matrix[i,j]]+',')
+        f.write('\n')
+
 
 
 
