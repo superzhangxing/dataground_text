@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import scipy
-from scipy.sparse import lil_matrix
+from scipy.sparse import lil_matrix, dok_matrix, csr_matrix
 
 # 统计在词的df（文档频率）
 def stat_df(docs):
@@ -92,27 +92,109 @@ def calculate_dc_bdc(docs, labels, word2id, label2id):
     bdc_array = 1. + bdc_array/np.log(num_label)
     return dc_array, bdc_array
 
-def compute_tf_matrix(train_data, dev_data, test_data):
-    def build_vocab(train_data, dev_data):
-        data = []
-        data.extend(train_data)
-        data.extend(dev_data)
-        word_set=set()
-        for doc in data:
-            for word in doc.split():
-                word_set.add(word)
-        word2id = {}
-        id2word = {}
-        id = 0
-        for word in word_set:
-            word2id[word] = id
-            id2word[id] = word
-            id += 1
-        return word2id, id2word
+def build_vocab(train_data, dev_data):
+    data = []
+    data.extend(train_data)
+    data.extend(dev_data)
+    word_set=set()
+    for doc in data:
+        for word in doc.split():
+            word_set.add(word)
+    word2id = {}
+    id2word = {}
+    id = 0
+    for word in word_set:
+        word2id[word] = id
+        id2word[id] = word
+        id += 1
+    return word2id, id2word
 
-    word2id,id2word = build_vocab(train_data, dev_data)
-    train_matrix = lil_matrix(len(train_data), len(word2id))
+def compute_tf_matrix(train_data, dev_data, test_data, word2id):
+    train_matrix = lil_matrix((len(train_data), len(word2id)),dtype=float)
+    dev_matrix = lil_matrix((len(dev_data), len(word2id)), dtype=float)
+    test_matrix = lil_matrix((len(test_data), len(word2id)), dtype = float)
+    id = 0
+    for doc in tqdm(train_data):
+        for word in doc.split():
+            if word in word2id:
+                train_matrix[id, word2id[word]] += 1
+        id += 1
+    id = 0
+    for doc in tqdm(dev_data):
+        for word in doc.split():
+            if word in word2id:
+                dev_matrix[id, word2id[word]] += 1
+        id += 1
+    id = 0
+    for doc in tqdm(test_data):
+        for word in doc.split():
+            if word in word2id:
+                test_matrix[id, word2id[word]] += 1
+        id += 1
+    return train_matrix.tocsr(), dev_matrix.tocsr(), test_matrix.tocsr()
 
+def compute_dc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
+    dc_dict = {}
+    dc_data = pd.read_csv(dc_bdc_file, header=False)
+    for index, row in dc_data.iterrows():
+        dc_dict[str(row[0])] = dc_dict[row[1]]
+
+    train_matrix = lil_matrix((len(train_data), len(word2id)),dtype=float)
+    dev_matrix = lil_matrix((len(dev_data), len(word2id)), dtype=float)
+    test_matrix = lil_matrix((len(test_data), len(word2id)), dtype = float)
+
+    id = 0
+    for doc in tqdm(train_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                train_matrix[id, word2id[word]] = dc_dict[word]
+        id += 1
+    id = 0
+    for doc in tqdm(dev_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                dev_matrix[id, word2id[word]] =dc_dict[word]
+        id += 1
+    id = 0
+    for doc in tqdm(test_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                test_matrix[id, word2id[word]] = dc_dict[word]
+        id += 1
+
+    return train_matrix.tocsr(), dev_matrix.tocsr(), test_matrix.tocsr()
+
+
+def compute_bdc_matrix(train_data, dev_data, test_data, dc_bdc_file, word2id):
+    dc_dict = {}
+    dc_data = pd.read_csv(dc_bdc_file, header=False)
+    for index, row in dc_data.iterrows():
+        dc_dict[str(row[0])] = dc_dict[row[2]]
+
+    train_matrix = lil_matrix((len(train_data), len(word2id)), dtype=float)
+    dev_matrix = lil_matrix((len(dev_data), len(word2id)), dtype=float)
+    test_matrix = lil_matrix((len(test_data), len(word2id)), dtype=float)
+
+    id = 0
+    for doc in tqdm(train_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                train_matrix[id, word2id[word]] = dc_dict[word]
+        id += 1
+    id = 0
+    for doc in tqdm(dev_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                dev_matrix[id, word2id[word]] = dc_dict[word]
+        id += 1
+    id = 0
+    for doc in tqdm(test_data):
+        for word in set(doc.split()):
+            if word in word2id:
+                test_matrix[id, word2id[word]] = dc_dict[word]
+        id += 1
+
+    return train_matrix.tocsr(), dev_matrix.tocsr(), test_matrix.tocsr()
 
 
 if __name__ == '__main__':
@@ -152,8 +234,12 @@ if __name__ == '__main__':
     #     w_str = str(id2word[i])+','+str(dc)+','+str(bdc)+'\n'
     #     f.write(w_str)
 
-    error = pd.read_csv('../result/dev_error', header=None)
+    # error = pd.read_csv('../result/dev_error', header=None)
 
+    train_data = pd.read_csv('../preprocess_data/train_word_seg', header=None, squeeze=True).values.tolist()
+    dev_data = pd.read_csv('../preprocess_data/dev_word_seg', header=None, squeeze=True).values.tolist()
+    test_data = pd.read_csv('../preprocess_data/test_word_seg', header=None, squeeze=True).values.tolist()
+    train_matrix, dev_matrix, test_matrix = compute_tf_matrix(train_data, dev_data, test_data)
 
 
 
